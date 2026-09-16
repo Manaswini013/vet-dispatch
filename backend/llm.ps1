@@ -1,0 +1,1 @@
+& "E:\llm\bin\llama-server.exe" -m "E:\llm\models\gemma4-e4b\google_gemma-4-E4B-it-Q4_K_M.gguf" --port 8080 -c 4096 -np 1 --reasoning off
