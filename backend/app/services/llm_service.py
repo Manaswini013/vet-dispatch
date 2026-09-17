@@ -1,10 +1,12 @@
 import json
+import os
 import re
 from typing import Any
 
+from dotenv import load_dotenv
 import requests
 
-LLM_URL = "http://127.0.0.1:8080/v1/chat/completions"
+load_dotenv()
 
 SYSTEM_PROMPT = """
 You are a veterinary emergency triage assistant.
@@ -75,12 +77,38 @@ def clean_json_response(content: str) -> str:
 
 class LLMService:
     def __init__(self):
-        self.url = LLM_URL
+        self.provider = os.getenv("LLM_PROVIDER", "local").lower()
+        if self.provider == "nvidia":
+            base_url = os.getenv(
+                "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
+            )
+            self.model = os.getenv("NVIDIA_MODEL", "openai/gpt-oss-20b")
+            self.api_key = os.getenv("NVIDIA_API_KEY", "")
+        elif self.provider == "local":
+            base_url = os.getenv(
+                "LOCAL_LLM_BASE_URL", "http://127.0.0.1:8080/v1"
+            )
+            self.model = os.getenv(
+                "LOCAL_LLM_MODEL", "google_gemma-4-E4B-it-Q4_K_M"
+            )
+            self.api_key = ""
+        else:
+            raise ValueError("LLM_PROVIDER must be 'local' or 'nvidia'.")
+
+        self.url = f"{base_url.rstrip('/')}/chat/completions"
 
     def triage(self, user_text: str) -> dict[str, Any]:
+        headers = {}
+        if self.provider == "nvidia":
+            if not self.api_key:
+                raise ValueError("NVIDIA_API_KEY is required when LLM_PROVIDER=nvidia.")
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
         response = requests.post(
             self.url,
+            headers=headers,
             json={
+                "model": self.model,
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_text},

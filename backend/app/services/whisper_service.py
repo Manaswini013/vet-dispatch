@@ -1,11 +1,16 @@
+import os
+
+from dotenv import load_dotenv
 from faster_whisper import WhisperModel
+
+load_dotenv()
 
 
 class WhisperService:
     def __init__(self):
         print("Loading Whisper model...")
         self.model = WhisperModel(
-            "small",
+            os.getenv("WHISPER_MODEL", "base"),
             device="cpu",
             compute_type="int8",
         )

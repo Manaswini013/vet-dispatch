@@ -1,7 +1,10 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.data.store import seed_demo_vets
 from app.routes.cases import router as cases_router
@@ -59,6 +62,32 @@ app.include_router(cases_router)
 app.include_router(vets_router)
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+
+
+def frontend_index():
+    if not FRONTEND_INDEX.is_file():
+        raise HTTPException(status_code=503, detail="Frontend build is not available.")
+    return FileResponse(FRONTEND_INDEX)
+
+
+@app.get("/")
+def frontend_root():
+    return frontend_index()
+
+
+@app.get("/report")
+def frontend_report():
+    return frontend_index()
+
+
+@app.get("/vet")
+def frontend_vet():
+    return frontend_index()
+
+
 @app.get("/health")
 def health():
     return {
@@ -70,3 +99,7 @@ def health():
         },
         "dispatch": "active",
     }
+
+
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
